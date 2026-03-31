@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { cn, formatMinutes, formatCurrency } from '@/common/helpers';
 import { todayISO, formatDateShort } from '@/lib/dateUtils';
 import { taskEntryService } from '@/services/taskEntry.service';
+import { categoryService, type Category } from '@/services/category.service';
 import type { TaskEntry } from '@/types';
 import moment from 'moment/min/moment-with-locales';
 
@@ -45,19 +46,26 @@ function getRange(period: ExportPeriod, customStart: string, customEnd: string) 
   }
 }
 
+function isBillable(categories: Category[], name: string | undefined): boolean {
+  if (!name) return true;
+  const cat = categories.find((c) => c.name === name);
+  return cat ? cat.billable : true;
+}
+
 function periodLabel(period: ExportPeriod, startDate: string, endDate: string): string {
   if (period === 'yesterday' || startDate === endDate) return `📅 ${formatDateShort(startDate)}`;
   return `📅 ${formatDateShort(startDate)} – ${formatDateShort(endDate)}`;
 }
 
-function entriesToMessage(entries: TaskEntry[], period: ExportPeriod, startDate: string, endDate: string): string {
-  const totalMinutes = entries.reduce((acc, e) => acc + e.time_spent_minutes, 0);
-  const totalAmount  = entries.reduce((acc, e) => acc + e.total_amount, 0);
+function entriesToMessage(entries: TaskEntry[], categories: Category[], period: ExportPeriod, startDate: string, endDate: string): string {
+  const billableEntries = entries.filter((e) => isBillable(categories, e.category));
+  const totalMinutes = billableEntries.reduce((acc, e) => acc + e.time_spent_minutes, 0);
+  const totalAmount  = billableEntries.reduce((acc, e) => acc + e.total_amount, 0);
   const header       = periodLabel(period, startDate, endDate);
   const summary      = `⏱ Total: ${formatMinutes(totalMinutes)} | 💰 ${formatCurrency(totalAmount)}`;
 
   const byDay = new Map<string, TaskEntry[]>();
-  for (const e of entries) {
+  for (const e of billableEntries) {
     if (!byDay.has(e.date)) byDay.set(e.date, []);
     byDay.get(e.date)!.push(e);
   }
@@ -73,9 +81,10 @@ function entriesToMessage(entries: TaskEntry[], period: ExportPeriod, startDate:
   return [header, summary, 'Tarefas:', ...days].join('\n');
 }
 
-function entriesToCSV(entries: TaskEntry[]): string {
+function entriesToCSV(entries: TaskEntry[], categories: Category[]): string {
+  const billableEntries = entries.filter((e) => isBillable(categories, e.category));
   const header = ['Data', 'Código', 'Descrição', 'Projeto', 'Categoria', 'Tempo', 'Valor (R$)', 'Status'];
-  const rows = entries.map((e) => [
+  const rows = billableEntries.map((e) => [
     formatDateShort(e.date),
     e.task_code,
     `"${e.description.replace(/"/g, '""')}"`,
@@ -116,13 +125,16 @@ export function ExportModal({ open, onClose }: Props) {
     if (!startDate || !endDate) { setError('Selecione um período válido.'); return; }
     setLoading(true);
     try {
-      const res = await taskEntryService.listEntries({ period: 'custom', startDate, endDate });
+      const [res, categories] = await Promise.all([
+        taskEntryService.listEntries({ period: 'custom', startDate, endDate }),
+        categoryService.list(),
+      ]);
       if (res.data.length === 0) { setError('Nenhum lançamento encontrado para o período selecionado.'); return; }
       if (format === 'csv') {
-        downloadCSV(entriesToCSV(res.data), `lancamentos_${startDate}_${endDate}.csv`);
+        downloadCSV(entriesToCSV(res.data, categories), `lancamentos_${startDate}_${endDate}.csv`);
         onClose();
       } else {
-        setMessage(entriesToMessage(res.data, period, startDate, endDate));
+        setMessage(entriesToMessage(res.data, categories, period, startDate, endDate));
       }
     } catch {
       setError('Erro ao buscar lançamentos. Tente novamente.');

@@ -1,6 +1,5 @@
 import type { AuthResponse, LoginInput, RegisterInput, AuthUser } from '@/types';
-
-const BASE = 'http://localhost:8080/api/v1';
+import { API_BASE as BASE } from './api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

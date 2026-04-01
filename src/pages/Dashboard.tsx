@@ -1,5 +1,6 @@
+import { useOutletContext } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { Clock, CheckSquare, DollarSign, TrendingUp, ArrowUpRight, Target, CalendarDays } from 'lucide-react';
+import { Clock, CheckSquare, DollarSign, TrendingUp, ArrowUpRight, Target, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { SummaryCard } from '@/components/ui/Card';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
@@ -12,13 +13,17 @@ import { TaskStatusBadge } from '@/components/ui/Badge';
 import { useCategories, isBillableCategory } from '@/hooks/useCategories';
 import moment from 'moment/min/moment-with-locales';
 
-// Dashboard sempre exibe o mês atual
-const PERIOD = 'month' as const;
-
 export default function Dashboard() {
+  const { monthOffset } = useOutletContext<{ monthOffset: number }>();
+
+  const monthStart = moment().add(monthOffset, 'months').startOf('month');
+  const startDate  = monthStart.format('YYYY-MM-DD');
+  const endDate    = monthStart.clone().endOf('month').format('YYYY-MM-DD');
+  const monthLabel = monthStart.locale('pt-br').format('MMMM [de] YYYY');
+
   const { settings } = useSettings();
-  const { summary, loading } = useDashboard(PERIOD);
-  const { entries } = useEntries({ period: PERIOD });
+  const { summary, loading } = useDashboard(startDate, endDate);
+  const { entries } = useEntries({ period: 'custom', startDate, endDate });
   const { entries: todayEntries } = useEntries({ period: 'today' });
   const { categories } = useCategories();
 
@@ -42,7 +47,6 @@ export default function Dashboard() {
   const remaining    = Math.max(goalMinutes - todayMinutes, 0);
 
   // Nome do mês atual
-  const monthLabel = moment().locale('pt-br').format('MMMM [de] YYYY');
 
   if (loading) return <PageLoader />;
 
@@ -56,7 +60,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-8">
 
-      {/* Mês atual — label */}
+      {/* Mês — label */}
       <div className="flex items-center gap-2">
         <CalendarDays size={15} className="text-muted" />
         <span className="text-sm text-muted capitalize">{monthLabel}</span>

@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:8080/api/v1';
+import { API_BASE as BASE } from './api';
 
 function authHeader(): Record<string, string> {
   const token = localStorage.getItem('task-manager-token');

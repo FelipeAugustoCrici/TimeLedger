@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, SlidersHorizontal, Trash2, ChevronDown, ChevronUp, Pencil, FileDown } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Trash2, ChevronDown, ChevronUp, Pencil, FileDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { TaskStatusBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -15,9 +15,11 @@ import { formatDateLong } from '@/lib/dateUtils';
 import { PERIOD_OPTIONS, TASK_STATUS_OPTIONS } from '@/common/constants';
 import { taskEntryService } from '@/services/taskEntry.service';
 import type { EntryFilters, PeriodFilter, TaskEntry, TaskEntryFormData, TaskStatus } from '@/types';
+import moment from 'moment/min/moment-with-locales';
 
 export default function Entries() {
   const [filters, setFilters] = useState<Partial<EntryFilters>>({ period: 'week' });
+  const [monthOffset, setMonthOffset] = useState(0);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -27,9 +29,16 @@ export default function Entries() {
 
   const toast = useToast();
 
+  // Quando período é "month", usa as datas do mês navegável
+  const monthStart   = moment().add(monthOffset, 'months').startOf('month');
+  const monthFilters = filters.period === 'month'
+    ? { period: 'custom' as PeriodFilter, startDate: monthStart.format('YYYY-MM-DD'), endDate: monthStart.clone().endOf('month').format('YYYY-MM-DD') }
+    : {};
+
   const activeFilters = useMemo(
-    () => ({ ...filters, search: search || undefined }),
-    [filters, search],
+    () => ({ ...filters, ...monthFilters, search: search || undefined }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filters, monthOffset, search],
   );
 
   const { entries, loading, error, createEntry, updateEntry, deleteEntry } = useEntries(activeFilters);
@@ -107,7 +116,7 @@ export default function Entries() {
           {PERIOD_OPTIONS.filter((p) => p.value !== 'custom').map((opt) => (
             <button
               key={opt.value}
-              onClick={() => setFilter('period', opt.value as PeriodFilter)}
+              onClick={() => { setFilter('period', opt.value as PeriodFilter); setMonthOffset(0); }}
               className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                 filters.period === opt.value
@@ -118,6 +127,30 @@ export default function Entries() {
               {opt.label}
             </button>
           ))}
+
+          {/* Navegação de mês — aparece só quando "Mês atual" está selecionado */}
+          {filters.period === 'month' && (
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-elevated px-2 py-1">
+              <button
+                onClick={() => setMonthOffset((o) => o - 1)}
+                className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary transition-colors"
+                aria-label="Mês anterior"
+              >
+                <ChevronLeft size={13} />
+              </button>
+              <span className="text-xs font-medium text-primary capitalize px-1 min-w-[80px] text-center">
+                {monthStart.locale('pt-br').format('MMM YYYY')}
+              </span>
+              <button
+                onClick={() => setMonthOffset((o) => o + 1)}
+                disabled={monthOffset >= 0}
+                className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Próximo mês"
+              >
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

@@ -1,16 +1,24 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calculator, Info, TrendingDown, TrendingUp, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Calculator, Info, TrendingDown, TrendingUp, ChevronDown, ChevronUp, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { simulate, suggestProLabore, PRO_LABORE_MIN, PRO_LABORE_TETO } from '@/common/pjSimulator';
 import { useEntries } from '@/hooks/useEntries';
 import { useCategories, isBillableCategory } from '@/hooks/useCategories';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { Input } from '@/components/ui/Input';
 import { formatCurrency, cn } from '@/common/helpers';
+import moment from 'moment/min/moment-with-locales';
 
 const DEFAULT_TAXA_ADM = 4.5;
 
 export default function Simulator() {
-  const { entries, loading: loadingEntries } = useEntries({ period: 'month' });
+  const [monthOffset, setMonthOffset] = useState(0);
+
+  const monthStart  = moment().add(monthOffset, 'months').startOf('month');
+  const startDate   = monthStart.format('YYYY-MM-DD');
+  const endDate     = monthStart.clone().endOf('month').format('YYYY-MM-DD');
+  const monthLabel  = monthStart.locale('pt-br').format('MMMM [de] YYYY');
+
+  const { entries, loading: loadingEntries } = useEntries({ period: 'custom', startDate, endDate });
   const { categories } = useCategories();
 
   // Soma real dos lançamentos do mês (apenas billable)
@@ -59,9 +67,30 @@ export default function Simulator() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand-light">
             <Calculator size={16} />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold text-primary">Parâmetros da simulação</p>
             <p className="text-xs text-muted">Ajuste os valores para simular seu líquido</p>
+          </div>
+          {/* Navegação de mês */}
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-elevated px-2 py-1">
+            <button
+              onClick={() => setMonthOffset((o) => o - 1)}
+              className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary transition-colors"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft size={13} />
+            </button>
+            <span className="text-xs font-medium text-primary capitalize px-1 min-w-[90px] text-center">
+              {monthLabel}
+            </span>
+            <button
+              onClick={() => setMonthOffset((o) => o + 1)}
+              disabled={monthOffset >= 0}
+              className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight size={13} />
+            </button>
           </div>
         </div>
 
@@ -94,10 +123,10 @@ export default function Simulator() {
             </div>
             <p className="text-[10px] text-muted">
               {loadingEntries
-                ? 'Carregando lançamentos do mês...'
+                ? 'Carregando lançamentos...'
                 : totalMes > 0
-                  ? `${entries.length} lançamento${entries.length !== 1 ? 's' : ''} em março · ${formatCurrency(totalMes)}`
-                  : 'Nenhum lançamento no mês atual — insira manualmente'
+                  ? `${entries.length} lançamento${entries.length !== 1 ? 's' : ''} em ${monthLabel} · ${formatCurrency(totalMes)}`
+                  : `Nenhum lançamento em ${monthLabel} — insira manualmente`
               }
             </p>
           </div>

@@ -9,7 +9,7 @@ import { categoryService, type Category } from '@/services/category.service';
 import type { TaskEntry } from '@/types';
 import moment from 'moment/min/moment-with-locales';
 
-type ExportPeriod = 'yesterday' | 'week' | 'month' | 'custom';
+type ExportPeriod = 'today' | 'yesterday' | 'week' | 'month' | 'custom';
 type ExportFormat = 'csv' | 'message';
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
 }
 
 const PERIOD_OPTIONS: { value: ExportPeriod; label: string }[] = [
+  { value: 'today',     label: 'Hoje'          },
   { value: 'yesterday', label: 'Dia anterior'  },
   { value: 'week',      label: 'Esta semana'   },
   { value: 'month',     label: 'Este mês'      },
@@ -27,6 +28,10 @@ const PERIOD_OPTIONS: { value: ExportPeriod; label: string }[] = [
 function getRange(period: ExportPeriod, customStart: string, customEnd: string) {
   const today = moment();
   switch (period) {
+    case 'today': {
+      const d = today.format('YYYY-MM-DD');
+      return { startDate: d, endDate: d };
+    }
     case 'yesterday': {
       const d = moment().subtract(1, 'day').format('YYYY-MM-DD');
       return { startDate: d, endDate: d };

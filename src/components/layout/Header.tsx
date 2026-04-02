@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, Menu, Settings, Sun, Moon, LogOut, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, Sun, Moon, Plus } from 'lucide-react';
 import { useTheme } from '@/lib/theme/useTheme';
 import { useAuth } from '@/lib/auth/useAuth';
 import { TimerWidget } from '@/components/shared/TimerWidget';
+import { cn } from '@/common/helpers';
 import moment from 'moment/min/moment-with-locales';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
   monthOffset?: number;
   onMonthChange?: (offset: number) => void;
   showMonthNav?: boolean;
+  onNewEntry?: () => void;
 }
 
 function greeting(name: string): string {
@@ -27,9 +29,9 @@ function monthLabel(offset: number): string {
   return moment().add(offset, 'months').locale('pt-br').format('MMMM YYYY');
 }
 
-export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonthNav = false }: HeaderProps) {
+export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonthNav = false, onNewEntry }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const initials = (user?.name ?? 'U')
     .split(' ')
@@ -39,9 +41,18 @@ export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonth
     .join('');
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-topbar px-5 lg:px-6 gap-4">
+    <header className={cn(
+      'flex h-14 shrink-0 items-center justify-between gap-4',
+      'rounded-2xl px-4 lg:px-5',
+      // Glass effect
+      'bg-sidebar/70 backdrop-blur-xl',
+      // Soft border instead of hard line
+      'border border-white/[0.06]',
+      // Depth shadow
+      'shadow-[0_4px_24px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.04)_inset]',
+    )}>
 
-      {/* Left — greeting + date */}
+      {/* Left */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuToggle}
@@ -51,12 +62,6 @@ export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonth
           <Menu size={18} />
         </button>
 
-        {/* Avatar */}
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/20 text-xs font-bold text-brand-light select-none">
-          {initials}
-        </div>
-
-        {/* Text */}
         <div className="min-w-0 hidden sm:block">
           <p className="text-sm font-semibold text-primary leading-none truncate">
             {greeting(user?.name ?? '')}
@@ -67,21 +72,6 @@ export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonth
 
       {/* Right */}
       <div className="flex items-center gap-2 shrink-0">
-
-        {/* Team pill */}
-        <div className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-elevated px-3 py-1.5">
-          <Zap size={13} className="text-brand-light" />
-          <span className="text-xs font-medium text-secondary">
-            {user?.name?.split(' ').slice(0, 2).join(' ') ?? 'Meu espaço'}
-          </span>
-          <button
-            onClick={toggleTheme}
-            className="ml-1 text-muted hover:text-primary transition-colors"
-            aria-label={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          >
-            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-          </button>
-        </div>
 
         {/* Month navigation */}
         {showMonthNav && onMonthChange && (
@@ -110,15 +100,37 @@ export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonth
         {/* Timer Widget */}
         <TimerWidget />
 
-        {/* Logout */}
+        {/* Theme toggle */}
         <button
-          onClick={logout}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-danger transition-colors"
-          aria-label="Sair"
-          title="Sair"
+          onClick={toggleTheme}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-hover hover:text-primary transition-colors"
+          aria-label={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
         >
-          <LogOut size={15} />
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
+
+        {/* New entry button */}
+        {onNewEntry && (
+          <button
+            onClick={onNewEntry}
+            className={cn(
+              'hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold',
+              'bg-brand text-white hover:bg-brand-dark transition-colors shadow-sm shadow-brand/20',
+            )}
+          >
+            <Plus size={14} />
+            Novo lançamento
+          </button>
+        )}
+
+        {/* Avatar */}
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/20 text-xs font-bold text-brand-light shrink-0 cursor-default select-none"
+          title={user?.name ?? 'Usuário'}
+        >
+          {initials}
+        </div>
       </div>
     </header>
   );

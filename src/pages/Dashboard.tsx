@@ -1,14 +1,16 @@
 import { useOutletContext } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { Clock, CheckSquare, DollarSign, TrendingUp, ArrowUpRight, Target, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { Clock, CheckSquare, DollarSign, TrendingUp, ArrowUpRight, Target, CalendarDays } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  Cell, ReferenceLine, CartesianGrid,
+} from 'recharts';
 import { SummaryCard } from '@/components/ui/Card';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useEntries } from '@/hooks/useEntries';
 import { useSettings } from '@/lib/settings/useSettings';
 import { formatCurrency, formatDecimalHours, formatDate, groupByDay, todayISO, cn } from '@/common/helpers';
-import { formatDateFull } from '@/lib/dateUtils';
 import { TaskStatusBadge } from '@/components/ui/Badge';
 import { useCategories, isBillableCategory } from '@/hooks/useCategories';
 import moment from 'moment/min/moment-with-locales';
@@ -121,8 +123,10 @@ export default function Dashboard() {
 
       {/* Gráfico de horas por dia no mês */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3 rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-3 rounded-2xl border border-border bg-card p-5 shadow-[0_2px_16px_rgba(0,0,0,0.3)]">
+
+          {/* Chart header */}
+          <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm font-semibold text-primary">Horas por dia</p>
               <p className="text-xs text-muted mt-0.5 capitalize">{monthLabel}</p>
@@ -131,6 +135,35 @@ export default function Dashboard() {
               Ver todos <ArrowUpRight size={12} />
             </Link>
           </div>
+
+          {/* Top summary strip */}
+          {summary && (
+            <div className="flex items-center gap-4 mb-4 px-3 py-2.5 rounded-xl bg-elevated/40 border border-border/50">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10px] text-muted uppercase tracking-wider">Total no mês</p>
+                <p className="text-sm font-bold text-primary tabular-nums">{formatDecimalHours(summary.totalHours)}</p>
+              </div>
+              <div className="h-6 w-px bg-border/60" />
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10px] text-muted uppercase tracking-wider">Média/dia</p>
+                <p className="text-sm font-bold text-primary tabular-nums">{formatDecimalHours(summary.avgHoursPerDay)}</p>
+              </div>
+              <div className="h-6 w-px bg-border/60" />
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10px] text-muted uppercase tracking-wider">Dias ativos</p>
+                <p className="text-sm font-bold text-primary tabular-nums">{dayGroups.length}</p>
+              </div>
+              {settings.dailyHoursGoal > 0 && (
+                <>
+                  <div className="h-6 w-px bg-border/60" />
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-[10px] text-muted uppercase tracking-wider">Meta diária</p>
+                    <p className="text-sm font-bold text-success tabular-nums">{settings.dailyHoursGoal}h</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {dayGroups.length === 0 ? (
             <div className="flex h-40 items-center justify-center">
@@ -145,50 +178,114 @@ export default function Dashboard() {
                 return { day: g.date.slice(8), date: g.date, base, extra, total };
               });
               return (
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={chartData} margin={{ top: 4, right: 0, left: -28, bottom: 0 }} barCategoryGap="20%">
-                    <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--color-muted)' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--color-muted)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}h`} />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                      contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px', color: 'var(--color-primary)' }}
-                      formatter={(value, name) => {
-                        if (Number(value) === 0) return null;
-                        return [`${value}h`, name === 'base' ? 'Horas' : 'Extra'];
-                      }}
-                      labelFormatter={(label, payload) => {
-                        const date = payload?.[0]?.payload?.date;
-                        const total = payload?.[0]?.payload?.total;
-                        return `${date ? formatDate(date) : label} — ${total}h`;
-                      }}
-                    />
-                    {goal > 0 && (
-                      <ReferenceLine
-                        y={goal}
-                        stroke="#22c55e66"
-                        strokeDasharray="4 3"
-                        strokeWidth={1.5}
-                        label={{ value: `${goal}h`, position: 'insideTopRight', fontSize: 10, fill: '#22c55e', dy: -4 }}
+                <>
+                  {/* SVG gradient defs */}
+                  <svg width="0" height="0" style={{ position: 'absolute' }}>
+                    <defs>
+                      <linearGradient id="barGradientGreen" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.95" />
+                        <stop offset="100%" stopColor="#16a34a" stopOpacity="0.55" />
+                      </linearGradient>
+                      <linearGradient id="barGradientGreenFaint" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.40" />
+                        <stop offset="100%" stopColor="#16a34a" stopOpacity="0.12" />
+                      </linearGradient>
+                      <linearGradient id="barGradientBrand" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#818cf8" stopOpacity="0.95" />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.55" />
+                      </linearGradient>
+                      <linearGradient id="barGradientBrandFaint" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#818cf8" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.10" />
+                      </linearGradient>
+                      <linearGradient id="barGradientWarning" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.95" />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.55" />
+                      </linearGradient>
+                      <linearGradient id="barGradientWarningFaint" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.45" />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.15" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+
+                  <ResponsiveContainer width="100%" height={190}>
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 8, right: 4, left: -22, bottom: 0 }}
+                      barCategoryGap="30%"
+                    >
+                      <CartesianGrid
+                        vertical={false}
+                        stroke="rgba(255,255,255,0.04)"
+                        strokeDasharray="0"
                       />
-                    )}
-                    {/* Parte base — até o limite (verde quando tem goal, roxo quando não tem) */}
-                    <Bar dataKey="base" stackId="a" maxBarSize={32}>
-                      {chartData.map((d) => {
-                        const isToday = d.date === todayISO();
-                        const fill = goal > 0
-                          ? (isToday ? '#22c55e' : '#22c55e55')
-                          : (isToday ? '#6366f1' : '#6366f133');
-                        return <Cell key={d.date} fill={fill} />;
-                      })}
-                    </Bar>
-                    {/* Parte extra — acima do limite (amarelo) */}
-                    <Bar dataKey="extra" stackId="a" maxBarSize={32} radius={[4, 4, 0, 0]}>
-                      {chartData.map((d) => (
-                        <Cell key={d.date} fill={d.extra > 0 ? (d.date === todayISO() ? '#f59e0b' : '#f59e0b88') : 'transparent'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                      <XAxis
+                        dataKey="day"
+                        tick={{ fontSize: 10, fill: 'var(--color-muted)', fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={4}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: 'var(--color-muted)', fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `${v}h`}
+                        width={32}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(99,102,241,0.08)', radius: 6 }}
+                        content={<ChartTooltip goal={goal} />}
+                      />
+                      {goal > 0 && (
+                        <ReferenceLine
+                          y={goal}
+                          stroke="#22c55e"
+                          strokeOpacity={0.5}
+                          strokeDasharray="6 4"
+                          strokeWidth={1.5}
+                          label={{
+                            value: `Meta diária — ${goal}h`,
+                            position: 'insideTopRight',
+                            fontSize: 9,
+                            fill: '#22c55e',
+                            fillOpacity: 0.8,
+                            dy: -6,
+                            dx: -4,
+                          }}
+                        />
+                      )}
+                      <Bar dataKey="base" stackId="a" maxBarSize={36} radius={[0, 0, 3, 3]}>
+                        {chartData.map((d) => {
+                          const isToday = d.date === todayISO();
+                          const fill = goal > 0
+                            ? (isToday ? 'url(#barGradientGreen)' : 'url(#barGradientGreenFaint)')
+                            : (isToday ? 'url(#barGradientBrand)' : 'url(#barGradientBrandFaint)');
+                          return <Cell key={d.date} fill={fill} />;
+                        })}
+                      </Bar>
+                      <Bar dataKey="extra" stackId="a" maxBarSize={36} radius={[4, 4, 0, 0]}>
+                        {chartData.map((d) => (
+                          <Cell
+                            key={d.date}
+                            fill={d.extra > 0
+                              ? (d.date === todayISO() ? 'url(#barGradientWarning)' : 'url(#barGradientWarningFaint)')
+                              : 'transparent'
+                            }
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  {/* Legend */}
+                  <div className="flex items-center gap-5 mt-3 pt-3 border-t border-border/50">
+                    {goal > 0 && <LegendDot color="#22c55e" label="Dentro da meta" />}
+                    <LegendDot color="#f59e0b" label="Acima da meta" />
+                    <LegendDot color="#818cf8" label="Hoje" />
+                  </div>
+                </>
               );
             })()}
         </div>
@@ -267,6 +364,56 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+
+interface ChartPayloadEntry {
+  payload: { day: string; date: string; base: number; extra: number; total: number };
+}
+
+function ChartTooltip({ active, payload, goal }: { active?: boolean; payload?: ChartPayloadEntry[]; goal: number }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const goalPct = goal > 0 ? Math.round((d.total / goal) * 100) : null;
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0e1628]/95 backdrop-blur-sm px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-xs min-w-[160px]">
+      <p className="font-semibold text-primary mb-2 text-[11px]">{d.date ? formatDate(d.date) : d.day}</p>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-muted">Horas</span>
+          <span className="font-bold text-primary tabular-nums">{d.total}h</span>
+        </div>
+        {d.extra > 0 && (
+          <div className="flex items-center justify-between gap-6">
+            <span className="text-muted">Acima da meta</span>
+            <span className="font-semibold text-warning tabular-nums">+{d.extra}h</span>
+          </div>
+        )}
+        {goalPct !== null && (
+          <div className="flex items-center justify-between gap-6 pt-1 mt-0.5 border-t border-white/8">
+            <span className="text-muted">% da meta</span>
+            <span className={cn(
+              'font-bold tabular-nums',
+              goalPct >= 100 ? 'text-success' : goalPct >= 75 ? 'text-warning' : 'text-muted',
+            )}>
+              {goalPct}%
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-[10px] text-muted">{label}</span>
     </div>
   );
 }

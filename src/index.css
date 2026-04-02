@@ -8,23 +8,23 @@
   --color-brand-light:  #818cf8;
   --color-brand-dark:   #4f46e5;
 
-  --color-app:          #0d1117;
-  --color-sidebar:      #111827;
-  --color-topbar:       #111827;
-  --color-surface:      #1a2235;
-  --color-card:         #1e2a3d;
-  --color-elevated:     #243044;
-  --color-hover:        #2a3650;
+  --color-app:          #080e1a;
+  --color-sidebar:      #0c1220;
+  --color-topbar:       #0c1220;
+  --color-surface:      #111827;
+  --color-card:         #111d2e;
+  --color-elevated:     #172035;
+  --color-hover:        #1e2d45;
 
-  --color-border:       #1f2d45;
-  --color-border-light: #2a3a55;
+  --color-border:       #1a2840;
+  --color-border-light: #243350;
 
-  --color-primary:      #f1f5f9;
-  --color-secondary:    #94a3b8;
-  --color-muted:        #4a5568;
-  --color-disabled:     #2d3748;
+  --color-primary:      #f0f4ff;
+  --color-secondary:    #8899bb;
+  --color-muted:        #3d5070;
+  --color-disabled:     #1e2d45;
 
-  --color-success:      #10b981;
+  --color-success:      #22c55e;
   --color-warning:      #f59e0b;
   --color-danger:       #ef4444;
   --color-info:         #3b82f6;
@@ -34,21 +34,21 @@
 
 /* ─── Light mode ─────────────────────────────────────────────────────────────── */
 html:not(.dark) {
-  --color-app:          #f1f5f9;
+  --color-app:          #f0f4ff;
   --color-sidebar:      #ffffff;
   --color-topbar:       #ffffff;
   --color-surface:      #f8fafc;
   --color-card:         #ffffff;
   --color-elevated:     #f1f5f9;
-  --color-hover:        #e2e8f0;
+  --color-hover:        #e8edf8;
 
-  --color-border:       #e2e8f0;
-  --color-border-light: #f1f5f9;
+  --color-border:       #dde4f0;
+  --color-border-light: #eef1f8;
 
-  --color-primary:      #0f172a;
-  --color-secondary:    #475569;
-  --color-muted:        #94a3b8;
-  --color-disabled:     #cbd5e1;
+  --color-primary:      #0a1628;
+  --color-secondary:    #3d5070;
+  --color-muted:        #8899bb;
+  --color-disabled:     #c8d4e8;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────── */
@@ -78,8 +78,51 @@ html:not(.dark) select { color-scheme: light; }
 
 /* ─── Sidebar nav states ─────────────────────────────────────────────────────── */
 .nav-active {
-  background: linear-gradient(90deg, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0.06) 100%);
+  background: linear-gradient(90deg, rgba(99,102,241,0.20) 0%, rgba(99,102,241,0.05) 100%);
   border-left: 2px solid var(--color-brand);
   color: var(--color-brand-light);
 }
 .nav-item { border-left: 2px solid transparent; }
+
+/* ─── Glow effects ───────────────────────────────────────────────────────────── */
+.glow-brand   { box-shadow: 0 0 24px rgba(99,102,241,0.20), 0 2px 8px rgba(0,0,0,0.3); }
+.glow-success { box-shadow: 0 0 24px rgba(34,197,94,0.15),  0 2px 8px rgba(0,0,0,0.3); }
+.glow-goal    { box-shadow: 0 0 32px rgba(99,102,241,0.18), 0 4px 16px rgba(0,0,0,0.35); }
+
+/* ─── Goal card highlight ────────────────────────────────────────────────────── */
+.goal-card-active {
+  border-color: rgba(99,102,241,0.35);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.12), 0 4px 24px rgba(99,102,241,0.12), 0 2px 8px rgba(0,0,0,0.3);
+}
+.goal-card-done {
+  border-color: rgba(34,197,94,0.35);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.10), 0 4px 24px rgba(34,197,94,0.10), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ─── Progress bar shimmer ───────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.progress-shimmer {
+  background: linear-gradient(90deg, var(--color-brand) 0%, #a5b4fc 50%, var(--color-brand) 100%);
+  background-size: 200% auto;
+  animation: shimmer 2.5s linear infinite;
+}
+.progress-shimmer-success {
+  background: linear-gradient(90deg, var(--color-success) 0%, #86efac 50%, var(--color-success) 100%);
+  background-size: 200% auto;
+  animation: shimmer 2.5s linear infinite;
+}
+
+/* ─── Card gradient borders ──────────────────────────────────────────────────── */
+.card-premium {
+  background: linear-gradient(135deg, var(--color-card) 0%, rgba(17,29,46,0.95) 100%);
+  border: 1px solid var(--color-border);
+}
+
+/* ─── Section divider ────────────────────────────────────────────────────────── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border-light), transparent);
+}

@@ -1,7 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { Clock, CheckSquare, DollarSign, TrendingUp, ArrowUpRight, Target, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { SummaryCard } from '@/components/ui/Card';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { useDashboard } from '@/hooks/useDashboard';
@@ -136,55 +136,61 @@ export default function Dashboard() {
             <div className="flex h-40 items-center justify-center">
               <p className="text-xs text-muted">Nenhum lançamento no mês</p>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart
-                data={dayGroups.slice().reverse().map((g) => ({
-                  day: g.date.slice(8),
-                  date: g.date,
-                  horas: parseFloat((g.totalMinutes / 60).toFixed(2)),
-                }))}
-                margin={{ top: 4, right: 0, left: -28, bottom: 0 }}
-                barCategoryGap="20%"
-              >
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 10, fill: 'var(--color-muted)' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: 'var(--color-muted)' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `${v}h`}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                  contentStyle={{
-                    background: 'var(--color-card)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: 'var(--color-primary)',
-                  }}
-                  formatter={(value) => [`${value}h`, 'Horas']}
-                  labelFormatter={(label, payload) => {
-                    const date = payload?.[0]?.payload?.date;
-                    return date ? formatDate(date) : label;
-                  }}
-                />
-                <Bar dataKey="horas" radius={[4, 4, 0, 0]} maxBarSize={32}>
-                  {dayGroups.slice().reverse().map((g) => (
-                    <Cell
-                      key={g.date}
-                      fill={g.date === todayISO() ? '#6366f1' : '#6366f133'}
+          ) : (() => {
+              const goal = settings.dailyHoursGoal;
+              const chartData = dayGroups.slice().reverse().map((g) => {
+                const total = parseFloat((g.totalMinutes / 60).toFixed(2));
+                const base  = goal > 0 ? parseFloat(Math.min(total, goal).toFixed(2)) : total;
+                const extra = goal > 0 ? parseFloat(Math.max(total - goal, 0).toFixed(2)) : 0;
+                return { day: g.date.slice(8), date: g.date, base, extra, total };
+              });
+              return (
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={chartData} margin={{ top: 4, right: 0, left: -28, bottom: 0 }} barCategoryGap="20%">
+                    <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--color-muted)' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--color-muted)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}h`} />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                      contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px', color: 'var(--color-primary)' }}
+                      formatter={(value, name) => {
+                        if (Number(value) === 0) return null;
+                        return [`${value}h`, name === 'base' ? 'Horas' : 'Extra'];
+                      }}
+                      labelFormatter={(label, payload) => {
+                        const date = payload?.[0]?.payload?.date;
+                        const total = payload?.[0]?.payload?.total;
+                        return `${date ? formatDate(date) : label} — ${total}h`;
+                      }}
                     />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+                    {goal > 0 && (
+                      <ReferenceLine
+                        y={goal}
+                        stroke="#22c55e66"
+                        strokeDasharray="4 3"
+                        strokeWidth={1.5}
+                        label={{ value: `${goal}h`, position: 'insideTopRight', fontSize: 10, fill: '#22c55e', dy: -4 }}
+                      />
+                    )}
+                    {/* Parte base — até o limite (verde quando tem goal, roxo quando não tem) */}
+                    <Bar dataKey="base" stackId="a" maxBarSize={32}>
+                      {chartData.map((d) => {
+                        const isToday = d.date === todayISO();
+                        const fill = goal > 0
+                          ? (isToday ? '#22c55e' : '#22c55e55')
+                          : (isToday ? '#6366f1' : '#6366f133');
+                        return <Cell key={d.date} fill={fill} />;
+                      })}
+                    </Bar>
+                    {/* Parte extra — acima do limite (amarelo) */}
+                    <Bar dataKey="extra" stackId="a" maxBarSize={32} radius={[4, 4, 0, 0]}>
+                      {chartData.map((d) => (
+                        <Cell key={d.date} fill={d.extra > 0 ? (d.date === todayISO() ? '#f59e0b' : '#f59e0b88') : 'transparent'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })()}
         </div>
 
         {/* Status */}

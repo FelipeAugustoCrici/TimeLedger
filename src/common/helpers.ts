@@ -17,9 +17,11 @@ export function formatCurrency(value: number): string {
 export function formatMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
+  let label: string;
+  if (h === 0) label = `${m}m`;
+  else if (m === 0) label = `${h}h`;
+  else label = `${h}h ${m}m`;
+  return `${label} (${minutes} min)`;
 }
 
 export function formatDecimalHours(value: number): string {

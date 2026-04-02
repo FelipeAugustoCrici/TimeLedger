@@ -120,3 +120,15 @@ export interface EntryFilters {
   project?: string;
   search?: string;
 }
+
+// ─── Timer ────────────────────────────────────────────────────────────────────
+export type TimerStatus = 'running' | 'paused';
+
+export interface ActiveTimer {
+  id: string;
+  status: TimerStatus;
+  started_at: string | null; // ISO 8601
+  elapsed_seconds: number;
+  created_at: string;
+  updated_at: string;
+}

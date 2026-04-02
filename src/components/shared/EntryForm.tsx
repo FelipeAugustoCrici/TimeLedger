@@ -21,9 +21,11 @@ interface EntryFormProps {
   onCancel: () => void;
   initialData?: Partial<TaskEntryFormData>;
   isEditing?: boolean;
+  onSplit?: (data: TaskEntryFormData) => Promise<void>;
+  remainingMinutes?: number;
 }
 
-export function EntryForm({ onSubmit, onCancel, initialData, isEditing = false }: EntryFormProps) {
+export function EntryForm({ onSubmit, onCancel, initialData, isEditing = false, onSplit, remainingMinutes }: EntryFormProps) {
   const { settings } = useSettings();
   const toast = useToast();
   const { categories: dbCategories } = useCategories();
@@ -99,6 +101,19 @@ export function EntryForm({ onSubmit, onCancel, initialData, isEditing = false }
       toast.success(isEditing ? 'Lançamento atualizado!' : 'Lançamento salvo com sucesso!');
     } catch {
       toast.error('Erro ao salvar lançamento. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSplit = async () => {
+    if (!onSplit) return;
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      await onSplit(form);
+    } catch {
+      toast.error('Erro ao dividir lançamento. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -180,7 +195,7 @@ export function EntryForm({ onSubmit, onCancel, initialData, isEditing = false }
           onChangeHours={(h) => set('hours', h)}
           onChangeMinutes={(m) => set('minutes', m)}
           error={errors.hours ?? errors.minutes}
-          hint="Use Tab para navegar entre horas e minutos"
+          hint={remainingMinutes !== undefined ? `Restam ${remainingMinutes} min` : 'Use Tab para navegar entre horas e minutos'}
         />
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-secondary">R$/hora</label>
@@ -257,6 +272,9 @@ export function EntryForm({ onSubmit, onCancel, initialData, isEditing = false }
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
+        {onSplit && (
+          <Button type="button" variant="secondary" onClick={handleSplit} loading={loading}>Dividir</Button>
+        )}
         <Button type="submit" loading={loading}>{isEditing ? 'Salvar alterações' : 'Salvar lançamento'}</Button>
       </div>
     </form>

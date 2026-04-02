@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, SlidersHorizontal, Trash2, ChevronDown, ChevronUp, Pencil, FileDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Trash2, ChevronDown, ChevronUp, Pencil, FileDown, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { TaskStatusBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -10,6 +10,8 @@ import { ExportModal } from '@/components/shared/ExportModal';
 import { useEntries } from '@/hooks/useEntries';
 import { useToast } from '@/lib/toast/useToast';
 import { useCategories, isBillableCategory } from '@/hooks/useCategories';
+import { useTimer } from '@/lib/timer/useTimer';
+import { useSettings } from '@/lib/settings/useSettings';
 import { cn, formatCurrency, formatMinutes, groupByDay } from '@/common/helpers';
 import { formatDateLong } from '@/lib/dateUtils';
 import { PERIOD_OPTIONS, TASK_STATUS_OPTIONS } from '@/common/constants';
@@ -28,6 +30,10 @@ export default function Entries() {
   const [exportOpen, setExportOpen] = useState(false);
 
   const toast = useToast();
+  const { timer, start } = useTimer();
+  const { settings } = useSettings();
+  const hasActiveTimer = timer !== null;
+  const goalMinutes = settings.dailyHoursGoal * 60;
 
   // Quando período é "month", usa as datas do mês navegável
   const monthStart   = moment().add(monthOffset, 'months').startOf('month');
@@ -277,7 +283,19 @@ export default function Entries() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right hidden sm:block">
-                      <p className="text-sm font-semibold text-primary">{formatMinutes(group.totalMinutes)}</p>
+                      <p className={cn(
+                        'text-sm font-semibold',
+                        goalMinutes > 0 && group.totalMinutes > goalMinutes
+                          ? 'text-warning'
+                          : goalMinutes > 0 && group.totalMinutes >= goalMinutes
+                            ? 'text-success'
+                            : 'text-primary',
+                      )}>
+                        {formatMinutes(group.totalMinutes)}
+                        {goalMinutes > 0 && group.totalMinutes >= goalMinutes && (
+                          <span className="ml-1 text-xs font-normal opacity-70">✓</span>
+                        )}
+                      </p>
                       <p className="text-xs text-success">{formatCurrency(group.totalAmount)}</p>
                     </div>
                     {isExpanded ? <ChevronUp size={15} className="text-muted" /> : <ChevronDown size={15} className="text-muted" />}
@@ -316,6 +334,17 @@ export default function Entries() {
                               <td className="px-5 py-3.5"><TaskStatusBadge status={entry.status} /></td>
                               <td className="px-5 py-3.5 text-right">
                                 <div className="flex items-center justify-end gap-1">
+                                  {entry.status === 'in_progress' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      icon={<Play size={13} fill="currentColor" />}
+                                      disabled={hasActiveTimer}
+                                      onClick={() => start({ initialSeconds: entry.time_spent_minutes * 60, sourceEntry: entry })}
+                                      title={hasActiveTimer ? 'Já existe um timer ativo' : 'Iniciar timer para esta task'}
+                                      className="text-brand/60 hover:text-brand hover:bg-brand/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    />
+                                  )}
                                   <Button
                                     variant="ghost" size="sm" icon={<Pencil size={13} />}
                                     onClick={() => handleEdit(entry)}
@@ -352,6 +381,17 @@ export default function Entries() {
                             <span>{formatMinutes(entry.time_spent_minutes)}</span>
                             <span className="font-medium text-primary">{billable ? formatCurrency(entry.total_amount) : '—'}</span>
                             <div className="flex items-center gap-1">
+                              {entry.status === 'in_progress' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={<Play size={13} fill="currentColor" />}
+                                  disabled={hasActiveTimer}
+                                  onClick={() => start({ initialSeconds: entry.time_spent_minutes * 60, sourceEntry: entry })}
+                                  title={hasActiveTimer ? 'Já existe um timer ativo' : 'Iniciar timer para esta task'}
+                                  className="text-brand/60 hover:text-brand hover:bg-brand/10 disabled:opacity-30 disabled:cursor-not-allowed h-7 w-7 p-0"
+                                />
+                              )}
                               <Button
                                 variant="ghost" size="sm" icon={<Pencil size={13} />}
                                 onClick={() => handleEdit(entry)}

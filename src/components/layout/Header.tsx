@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Menu, Settings, Sun, Moon, LogOut, Zap } from 'lucide-react';
 import { useTheme } from '@/lib/theme/useTheme';
 import { useAuth } from '@/lib/auth/useAuth';
+import { TimerWidget } from '@/components/shared/TimerWidget';
 import moment from 'moment/min/moment-with-locales';
 
 interface HeaderProps {
@@ -105,6 +106,9 @@ export function Header({ onMenuToggle, monthOffset = 0, onMonthChange, showMonth
             </button>
           </div>
         )}
+
+        {/* Timer Widget */}
+        <TimerWidget />
 
         {/* Logout */}
         <button
